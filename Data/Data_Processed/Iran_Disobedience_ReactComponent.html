@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Iran Disobedience Map</title>
+  <style>
+    body { 
+      margin: 0; 
+      background-color: #f4f6f8; 
+      color: #2c3e50; 
+      overflow: hidden; 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    }
+    .map-container { width: 100vw; height: 100vh; position: relative; perspective: 1200px; }
+    
+    .glowing-marker { 
+      cursor: pointer; 
+      transition: all 0.3s ease; 
+      fill: rgba(52, 152, 219, 0.7); 
+      stroke: #2980b9;
+      stroke-width: 1px;
+    }
+    .glowing-marker:hover { 
+      fill: rgba(231, 76, 60, 0.9); 
+      stroke: #c0392b;
+      filter: drop-shadow(0 0 6px rgba(231, 76, 60, 0.5)); 
+    }
+    
+    .info-panel {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      border: 1px solid #e1e8ed;
+      z-index: 100;
+    }
+    .info-panel h2 { margin: 0 0 5px 0; font-size: 18px; color: #2c3e50; }
+    .info-panel p { margin: 0; font-size: 13px; color: #7f8c8d; }
+
+    /* Pure CSS 3D Tooltip (No External Animation Libs needed) */
+    .tooltip-3d {
+      position: absolute; 
+      pointer-events: none; 
+      background: rgba(255, 255, 255, 0.95); 
+      backdrop-filter: blur(4px);
+      border: 1px solid #e1e8ed; 
+      padding: 15px; 
+      border-radius: 8px; 
+      width: 160px;
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      transform-style: preserve-3d;
+      box-shadow: 5px 15px 30px rgba(0,0,0,0.15); 
+      z-index: 1000;
+      
+      /* Base hidden state */
+      opacity: 0;
+      transform: rotateX(50deg) rotateZ(-5deg) translateY(20px) scale(0.9);
+      transition: opacity 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+                  transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    /* Visible state class */
+    .tooltip-3d.visible {
+      opacity: 1;
+      transform: rotateX(20deg) rotateZ(0deg) translateY(0) scale(1);
+    }
+
+    .tooltip-header h4 { margin: 0; color: #2c3e50; text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px; text-align: center; }
+    .tooltip-header p { margin: 5px 0 15px 0; color: #7f8c8d; font-size: 11px; font-weight: 600; text-align: center; }
+    
+    .stacked-bar-container {
+      width: 40px; 
+      height: 140px; 
+      background-color: #ecf0f1; 
+      display: flex;
+      flex-direction: column; 
+      justify-content: flex-end; 
+      border-radius: 4px; 
+      overflow: hidden;
+      transform: translateZ(20px);
+      box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+      border: 1px solid #bdc3c7;
+    }
+    .stack-segment { width: 100%; transition: height 0.4s ease; }
+    
+    .peaceful { background-color: #2ecc71; }       
+    .intervention { background-color: #f1c40f; }   
+    .force { background-color: #e67e22; }          
+    .violent { background-color: #e74c3c; }        
+    
+    .tooltip-base {
+      margin-top: 15px; 
+      font-size: 10px; 
+      color: #95a5a6; 
+      text-transform: uppercase; 
+      width: 100%;
+      text-align: center; 
+      border-top: 1px solid #ecf0f1; 
+      padding-top: 5px;
+      transform: rotateX(70deg) translateZ(-5px);
+    }
+  </style>
+
+  <!-- External React and Mapping Scripts -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+  <script src="https://unpkg.com/topojson-client@3"></script>
+  <script src="https://unpkg.com/react-simple-maps@3.0.0/dist/index.js"></script>
+</head>
+<body>
+  <!-- System Error Catcher in case anything breaks so we can see the exact error -->
+  <div id="error-log" style="color:red; font-family:sans-serif; padding:20px; font-weight:bold;"></div>
+  
+  <script>
+    window.onerror = function(msg, url, line, col, error) {
+      document.getElementById('error-log').innerHTML += `<p>JS Error: ${msg}</p>`;
+      return false;
+    };
+  </script>
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const { ComposableMap, Geographies, Geography, Marker } = window.ReactSimpleMaps;
+
+    const mapData = [{"ADMIN1":"Alborz","TOTAL_SCORE":0.1646,"LAT":35.9457,"LONG":50.906,"peaceful":80.53,"intervention":8.58,"force":2.64,"violent":8.25},{"ADMIN1":"Ardabil","TOTAL_SCORE":0.0433,"LAT":38.4066,"LONG":47.9857,"peaceful":93.75,"intervention":3.33,"force":0.42,"violent":2.5},{"ADMIN1":"Bushehr","TOTAL_SCORE":0.0015,"LAT":28.7846,"LONG":51.5038,"peaceful":91.98,"intervention":2.29,"force":0.86,"violent":4.87},{"ADMIN1":"Chaharmahal and Bakhtiari","TOTAL_SCORE":0.0067,"LAT":31.979,"LONG":50.8101,"peaceful":91.73,"intervention":1.97,"force":0.79,"violent":5.51},{"ADMIN1":"East Azerbaijan","TOTAL_SCORE":0.0808,"LAT":38.0858,"LONG":46.6924,"peaceful":91.73,"intervention":5.6,"force":0.49,"violent":2.19},{"ADMIN1":"Fars","TOTAL_SCORE":0.323,"LAT":29.3576,"LONG":53.3176,"peaceful":86.62,"intervention":6.33,"force":1.46,"violent":5.6},{"ADMIN1":"Gilan","TOTAL_SCORE":0.1744,"LAT":37.5092,"LONG":49.0189,"peaceful":87.61,"intervention":4.42,"force":1.55,"violent":6.42},{"ADMIN1":"Golestan","TOTAL_SCORE":0.0315,"LAT":37.2982,"LONG":54.8804,"peaceful":90.86,"intervention":2.69,"force":1.08,"violent":5.38},{"ADMIN1":"Hamadan","TOTAL_SCORE":0.0303,"LAT":34.8698,"LONG":48.559,"peaceful":88.45,"intervention":4.78,"force":1.2,"violent":5.58},{"ADMIN1":"Hormozgan","TOTAL_SCORE":0.01,"LAT":27.1422,"LONG":55.0325,"peaceful":88.15,"intervention":3.47,"force":1.16,"violent":7.23},{"ADMIN1":"Ilam","TOTAL_SCORE":0.0061,"LAT":33.0433,"LONG":46.8724,"peaceful":90.0,"intervention":3.93,"force":1.43,"violent":4.64},{"ADMIN1":"Isfahan","TOTAL_SCORE":0.6371,"LAT":32.6094,"LONG":52.0477,"peaceful":84.43,"intervention":7.88,"force":1.13,"violent":6.57},{"ADMIN1":"Kerman","TOTAL_SCORE":0.0813,"LAT":29.2326,"LONG":57.3392,"peaceful":91.71,"intervention":2.76,"force":0.55,"violent":4.97},{"ADMIN1":"Kermanshah","TOTAL_SCORE":0.2301,"LAT":34.4871,"LONG":46.8086,"peaceful":87.44,"intervention":5.42,"force":1.48,"violent":5.67},{"ADMIN1":"Khuzestan","TOTAL_SCORE":0.1965,"LAT":31.4636,"LONG":48.9916,"peaceful":80.63,"intervention":10.08,"force":1.73,"violent":7.56},{"ADMIN1":"Kohgiluyeh and Boyer-Ahmad","TOTAL_SCORE":0.0007,"LAT":30.7032,"LONG":51.0949,"peaceful":92.75,"intervention":3.48,"force":0.29,"violent":3.48},{"ADMIN1":"Kurdistan","TOTAL_SCORE":0.0107,"LAT":35.6014,"LONG":47.0057,"peaceful":84.2,"intervention":5.93,"force":2.22,"violent":7.65},{"ADMIN1":"Lorestan","TOTAL_SCORE":0.0046,"LAT":33.5164,"LONG":48.3219,"peaceful":90.83,"intervention":2.58,"force":1.43,"violent":5.16},{"ADMIN1":"Markazi","TOTAL_SCORE":0.1348,"LAT":34.4772,"LONG":49.5818,"peaceful":91.64,"intervention":2.99,"force":1.49,"violent":3.88},{"ADMIN1":"Mazandaran","TOTAL_SCORE":0.2802,"LAT":36.3633,"LONG":52.3677,"peaceful":90.5,"intervention":3.26,"force":1.48,"violent":4.75},{"ADMIN1":"North Khorasan","TOTAL_SCORE":0.0139,"LAT":37.4249,"LONG":57.178,"peaceful":94.38,"intervention":3.12,"force":0.62,"violent":1.88},{"ADMIN1":"Persian Gulf","TOTAL_SCORE":0.0,"LAT":27.0645,"LONG":51.452,"peaceful":100.0,"intervention":0.0,"force":0.0,"violent":0.0},{"ADMIN1":"Qazvin","TOTAL_SCORE":0.0035,"LAT":36.1089,"LONG":50.0386,"peaceful":92.96,"intervention":3.52,"force":0.29,"violent":3.23},{"ADMIN1":"Qom","TOTAL_SCORE":0.1128,"LAT":34.6674,"LONG":51.002,"peaceful":92.4,"intervention":2.34,"force":0.58,"violent":4.68},{"ADMIN1":"Razavi Khorasan","TOTAL_SCORE":0.1567,"LAT":35.7792,"LONG":59.0295,"peaceful":85.75,"intervention":6.8,"force":0.66,"violent":6.8},{"ADMIN1":"Semnan","TOTAL_SCORE":0.0011,"LAT":35.7868,"LONG":54.9676,"peaceful":96.98,"intervention":1.01,"force":0.5,"violent":1.51},{"ADMIN1":"Sistan and Baluchestan","TOTAL_SCORE":0.4035,"LAT":28.2728,"LONG":60.8613,"peaceful":75.94,"intervention":8.29,"force":2.67,"violent":13.1},{"ADMIN1":"South Khorasan","TOTAL_SCORE":0.0,"LAT":32.8019,"LONG":58.24,"peaceful":98.25,"intervention":0.0,"force":0.0,"violent":1.75},{"ADMIN1":"Tehran","TOTAL_SCORE":0.5172,"LAT":35.5022,"LONG":51.3269,"peaceful":68.77,"intervention":21.74,"force":1.84,"violent":7.64},{"ADMIN1":"West Azerbaijan","TOTAL_SCORE":0.0886,"LAT":37.8742,"LONG":44.7003,"peaceful":86.57,"intervention":4.57,"force":2.0,"violent":6.86},{"ADMIN1":"Yazd","TOTAL_SCORE":0.0625,"LAT":31.4825,"LONG":54.4162,"peaceful":95.75,"intervention":1.96,"force":0.0,"violent":2.29},{"ADMIN1":"Zanjan","TOTAL_SCORE":0.028,"LAT":36.4014,"LONG":48.422,"peaceful":94.62,"intervention":1.54,"force":0.77,"violent":3.08}];
+    const geoUrl = "https://raw.githubusercontent.com/deldersveld/topojson/master/countries/iran/iran-provinces.json";
+
+    const IranDisobedienceMap = () => {
+      const [hoveredRegion, setHoveredRegion] = useState(null);
+      const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+      const handleMouseMove = (e) => {
+        setMousePos({ x: e.clientX, y: e.clientY });
+      };
+
+      return (
+        <div className="map-container" onMouseMove={handleMouseMove}>
+          <div className="info-panel">
+            <h2>Iran Regional Disobedience Index</h2>
+            <p>Bubble size indicates total disobedience score.</p>
+            <p>Hover over a region to view event composition.</p>
+          </div>
+
+          <ComposableMap
+            projection="geoMercator"
+            projectionConfig={{ scale: 2200, center: [53.6880, 32.4279] }}
+            style={{ width: "100%", height: "100vh" }}
+          >
+            <Geographies geography={geoUrl}>
+              {({ geographies }) =>
+                geographies.map((geo) => (
+                  <Geography
+                    key={geo.rsmKey}
+                    geography={geo}
+                    style={{
+                      default: { fill: "#d5dde3", outline: "none", stroke: "#ffffff", strokeWidth: 0.75 },
+                      hover: { fill: "#c1cace", outline: "none", stroke: "#ffffff", strokeWidth: 0.75 },
+                      pressed: { fill: "#b0b9bf", outline: "none", stroke: "#ffffff", strokeWidth: 0.75 },
+                    }}
+                  />
+                ))
+              }
+            </Geographies>
+
+            {mapData && mapData.map((region, idx) => {
+              const markerSize = Math.max(4, Math.sqrt(region.TOTAL_SCORE) * 20);
+              return (
+                <Marker
+                  key={idx}
+                  coordinates={[region.LONG, region.LAT]}
+                  onMouseEnter={() => setHoveredRegion(region)}
+                  onMouseLeave={() => setHoveredRegion(null)}
+                >
+                  <circle r={markerSize} className="glowing-marker" />
+                </Marker>
+              );
+            })}
+          </ComposableMap>
+
+          <div
+            className={`tooltip-3d ${hoveredRegion ? 'visible' : ''}`}
+            style={{
+              left: mousePos.x + 20,
+              top: mousePos.y - 180,
+            }}
+          >
+            {hoveredRegion && (
+              <>
+                <div className="tooltip-header">
+                  <h4>{hoveredRegion.ADMIN1}</h4>
+                  <p>Score: {hoveredRegion.TOTAL_SCORE.toFixed(3)}</p>
+                </div>
+
+                <div className="stacked-bar-container">
+                  <div className="stack-segment violent" style={{ height: hoveredRegion.violent + '%' }} title={`Violent: ${hoveredRegion.violent}%`} />
+                  <div className="stack-segment force" style={{ height: hoveredRegion.force + '%' }} title={`Force: ${hoveredRegion.force}%`} />
+                  <div className="stack-segment intervention" style={{ height: hoveredRegion.intervention + '%' }} title={`Intervention: ${hoveredRegion.intervention}%`} />
+                  <div className="stack-segment peaceful" style={{ height: hoveredRegion.peaceful + '%' }} title={`Peaceful: ${hoveredRegion.peaceful}%`} />
+                </div>
+                <div className="tooltip-base">Base</div>
+              </>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<IranDisobedienceMap />);
+  </script>
+</body>
+</html>
