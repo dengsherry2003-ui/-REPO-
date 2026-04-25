@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Interactive Regional Disobedience Index across Iran</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: white; color: #2a3f5f; }
+        #map { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        .plotly-title {
+            position: absolute; top: 20px; left: 0; width: 100%; text-align: center;
+            z-index: 1000; pointer-events: none;
+        }
+        .plotly-title h1 { margin: 0; font-size: 24px; font-weight: normal; color: #2a3f5f; }
+
+        .legend-panel {
+            position: absolute; top: 50%; right: 30px; transform: translateY(-50%);
+            z-index: 1000; padding: 15px; border-radius: 4px;
+            display: flex; flex-direction: column; align-items: center; font-size: 12px; font-family: Arial, sans-serif;
+            background: rgba(255,255,255,0.85); box-shadow: 0 2px 8px rgba(0,0,0,0.1); pointer-events: none;
+        }
+
+        .colorbar-title { font-weight: bold; margin-bottom: 8px; text-align: center; color: #444; }
+        .colorbar-scale { display: flex; height: 150px; }
+        .colorbar-labels {
+            display: flex; flex-direction: column; justify-content: space-between; 
+            height: 100%; margin-right: 8px; text-align: right; font-size: 11px;
+        }
+        .colorbar-gradient {
+            width: 20px; height: 100%;
+            background: linear-gradient(to top, #fff5f0, #fee0d2, #fcbba1, #fc9272, #fb6a4a, #ef3b2c, #cb181d, #99000d);
+            border: 1px solid #ccc;
+        }
+
+        .info-panel {
+            position: absolute; top: 20px; left: 60px; z-index: 1000;
+            background: rgba(255,255,255,0.9); padding: 12px 20px; border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #e1e8ed; pointer-events: none;
+        }
+        .info-panel p { margin: 5px 0; font-size: 12px; color: #555; }
+
+        .leaflet-tooltip.custom-tooltip {
+            background: rgba(255, 255, 255, 0.98); border: 1px solid #ddd;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-radius: 4px; padding: 15px; font-family: Arial, sans-serif;
+        }
+        .tooltip-content { text-align: center; width: 170px; }
+        .tooltip-content h4 { margin: 0 0 5px 0; font-size: 15px; color: #2a3f5f; }
+        .tooltip-content .region-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px 0; }
+        .tooltip-content .score-label { margin: 0 0 10px 0; font-size: 13px; color: #444; font-weight: bold; }
+        
+        .pie-chart { width: 100px; height: 100px; border-radius: 50%; margin: 10px auto; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .legend { display: flex; flex-wrap: wrap; width: 100%; font-size: 11px; margin-top: 15px; text-align: left; }
+        .legend-item { display: flex; align-items: center; width: 50%; margin-bottom: 6px; color: #444; }
+        .color-box { width: 12px; height: 12px; margin-right: 6px; border-radius: 2px; border: 1px solid #ccc;}
+    </style>
+</head>
+<body>
+    <div class="plotly-title"><h1>Interactive Regional Disobedience Index across Iran</h1></div>
+
+    <div class="info-panel">
+        <p><b>Bubble Size:</b> Total Events</p>
+        <p><b>Bubble Color:</b> Disobedience Index (0 - 1.0)</p>
+        <p><b>Hover:</b> Sub-event proportion Pie Chart</p>
+    </div>
+
+    <!-- Combined Legend Panel -->
+    <div class="legend-panel">
+        <div class="colorbar-title">Index<br>(Color)</div>
+        <div class="colorbar-scale">
+            <div class="colorbar-labels" id="colorbar-labels">
+                <span>1.0</span>
+                <span>0.75</span>
+                <span>0.50</span>
+                <span>0.25</span>
+                <span>0</span>
+            </div>
+            <div class="colorbar-gradient"></div>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <script>
+        var map = L.map('map', {zoomControl: false}).setView([32.4279, 53.6880], 5);
+        L.control.zoom({ position: 'topleft' }).addTo(map);
+        
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; CARTO', subdomains: 'abcd', maxZoom: 20
+        }).addTo(map);
+
+        var mapData = [{"ADMIN1":"Alborz","TOTAL_SCORE":0.7061,"TOTAL_EVENTS":596,"LAT":35.9457,"LONG":50.906,"DISOBEDIENCE_INDEX":0.2532,"peaceful":80.53,"intervention":8.58,"force":2.64,"violent":8.25},{"ADMIN1":"Ardabil","TOTAL_SCORE":0.1955,"TOTAL_EVENTS":416,"LAT":38.4066,"LONG":47.9857,"DISOBEDIENCE_INDEX":0.0846,"peaceful":93.75,"intervention":3.33,"force":0.42,"violent":2.5},{"ADMIN1":"Bushehr","TOTAL_SCORE":0.1279,"TOTAL_EVENTS":957,"LAT":28.7846,"LONG":51.5038,"DISOBEDIENCE_INDEX":0.057,"peaceful":91.98,"intervention":2.29,"force":0.86,"violent":4.87},{"ADMIN1":"Chaharmahal and Bakhtiari","TOTAL_SCORE":0.1237,"TOTAL_EVENTS":446,"LAT":31.979,"LONG":50.8101,"DISOBEDIENCE_INDEX":0.0553,"peaceful":91.73,"intervention":1.97,"force":0.79,"violent":5.51},{"ADMIN1":"East Azerbaijan","TOTAL_SCORE":0.5749,"TOTAL_EVENTS":1082,"LAT":38.0858,"LONG":46.6924,"DISOBEDIENCE_INDEX":0.2153,"peaceful":91.73,"intervention":5.6,"force":0.49,"violent":2.19},{"ADMIN1":"Fars","TOTAL_SCORE":1.3378,"TOTAL_EVENTS":1191,"LAT":29.3576,"LONG":53.3176,"DISOBEDIENCE_INDEX":0.4025,"peaceful":86.62,"intervention":6.33,"force":1.46,"violent":5.6},{"ADMIN1":"Gilan","TOTAL_SCORE":0.7941,"TOTAL_EVENTS":1153,"LAT":37.5092,"LONG":49.0189,"DISOBEDIENCE_INDEX":0.2771,"peaceful":87.61,"intervention":4.42,"force":1.55,"violent":6.42},{"ADMIN1":"Golestan","TOTAL_SCORE":0.1457,"TOTAL_EVENTS":323,"LAT":37.2982,"LONG":54.8804,"DISOBEDIENCE_INDEX":0.0645,"peaceful":90.86,"intervention":2.69,"force":1.08,"violent":5.38},{"ADMIN1":"Hamadan","TOTAL_SCORE":0.1473,"TOTAL_EVENTS":485,"LAT":34.8698,"LONG":48.559,"DISOBEDIENCE_INDEX":0.0651,"peaceful":88.45,"intervention":4.78,"force":1.2,"violent":5.58},{"ADMIN1":"Hormozgan","TOTAL_SCORE":0.587,"TOTAL_EVENTS":761,"LAT":27.1422,"LONG":55.0325,"DISOBEDIENCE_INDEX":0.2189,"peaceful":88.15,"intervention":3.47,"force":1.16,"violent":7.23},{"ADMIN1":"Ilam","TOTAL_SCORE":0.0823,"TOTAL_EVENTS":525,"LAT":33.0433,"LONG":46.8724,"DISOBEDIENCE_INDEX":0.0375,"peaceful":90.0,"intervention":3.93,"force":1.43,"violent":4.64},{"ADMIN1":"Isfahan","TOTAL_SCORE":2.336,"TOTAL_EVENTS":1886,"LAT":32.6094,"LONG":52.0477,"DISOBEDIENCE_INDEX":0.5711,"peaceful":84.43,"intervention":7.88,"force":1.13,"violent":6.57},{"ADMIN1":"Kerman","TOTAL_SCORE":0.5214,"TOTAL_EVENTS":840,"LAT":29.2326,"LONG":57.3392,"DISOBEDIENCE_INDEX":0.1989,"peaceful":91.71,"intervention":2.76,"force":0.55,"violent":4.97},{"ADMIN1":"Kermanshah","TOTAL_SCORE":1.378,"TOTAL_EVENTS":1055,"LAT":34.4871,"LONG":46.8086,"DISOBEDIENCE_INDEX":0.4106,"peaceful":87.44,"intervention":5.42,"force":1.48,"violent":5.67},{"ADMIN1":"Khuzestan","TOTAL_SCORE":1.2749,"TOTAL_EVENTS":4690,"LAT":31.4636,"LONG":48.9916,"DISOBEDIENCE_INDEX":0.3896,"peaceful":80.63,"intervention":10.08,"force":1.73,"violent":7.56},{"ADMIN1":"Kohgiluyeh and Boyer-Ahmad","TOTAL_SCORE":0.1497,"TOTAL_EVENTS":712,"LAT":30.7032,"LONG":51.0949,"DISOBEDIENCE_INDEX":0.0661,"peaceful":92.75,"intervention":3.48,"force":0.29,"violent":3.48},{"ADMIN1":"Kurdistan","TOTAL_SCORE":0.0964,"TOTAL_EVENTS":1182,"LAT":35.6014,"LONG":47.0057,"DISOBEDIENCE_INDEX":0.0436,"peaceful":84.2,"intervention":5.93,"force":2.22,"violent":7.65},{"ADMIN1":"Lorestan","TOTAL_SCORE":0.067,"TOTAL_EVENTS":887,"LAT":33.5164,"LONG":48.3219,"DISOBEDIENCE_INDEX":0.0307,"peaceful":90.83,"intervention":2.58,"force":1.43,"violent":5.16},{"ADMIN1":"Markazi","TOTAL_SCORE":0.5756,"TOTAL_EVENTS":759,"LAT":34.4772,"LONG":49.5818,"DISOBEDIENCE_INDEX":0.2155,"peaceful":91.64,"intervention":2.99,"force":1.49,"violent":3.88},{"ADMIN1":"Mazandaran","TOTAL_SCORE":0.9404,"TOTAL_EVENTS":932,"LAT":36.3633,"LONG":52.3677,"DISOBEDIENCE_INDEX":0.3142,"peaceful":90.5,"intervention":3.26,"force":1.48,"violent":4.75},{"ADMIN1":"North Khorasan","TOTAL_SCORE":0.0822,"TOTAL_EVENTS":283,"LAT":37.4249,"LONG":57.178,"DISOBEDIENCE_INDEX":0.0374,"peaceful":94.38,"intervention":3.12,"force":0.62,"violent":1.88},{"ADMIN1":"Persian Gulf","TOTAL_SCORE":0.0,"TOTAL_EVENTS":5,"LAT":27.0645,"LONG":51.452,"DISOBEDIENCE_INDEX":0.0,"peaceful":100.0,"intervention":0.0,"force":0.0,"violent":0.0},{"ADMIN1":"Qazvin","TOTAL_SCORE":0.0394,"TOTAL_EVENTS":692,"LAT":36.1089,"LONG":50.0386,"DISOBEDIENCE_INDEX":0.0183,"peaceful":92.96,"intervention":3.52,"force":0.29,"violent":3.23},{"ADMIN1":"Qom","TOTAL_SCORE":0.4591,"TOTAL_EVENTS":266,"LAT":34.6674,"LONG":51.002,"DISOBEDIENCE_INDEX":0.1791,"peaceful":92.4,"intervention":2.34,"force":0.58,"violent":4.68},{"ADMIN1":"Razavi Khorasan","TOTAL_SCORE":0.6628,"TOTAL_EVENTS":1297,"LAT":35.7792,"LONG":59.0295,"DISOBEDIENCE_INDEX":0.241,"peaceful":85.75,"intervention":6.8,"force":0.66,"violent":6.8},{"ADMIN1":"Semnan","TOTAL_SCORE":0.4336,"TOTAL_EVENTS":430,"LAT":35.7868,"LONG":54.9676,"DISOBEDIENCE_INDEX":0.1707,"peaceful":96.98,"intervention":1.01,"force":0.5,"violent":1.51},{"ADMIN1":"Sistan and Baluchestan","TOTAL_SCORE":7.2452,"TOTAL_EVENTS":797,"LAT":28.2728,"LONG":60.8613,"DISOBEDIENCE_INDEX":1.0,"peaceful":75.94,"intervention":8.29,"force":2.67,"violent":13.1},{"ADMIN1":"South Khorasan","TOTAL_SCORE":0.0166,"TOTAL_EVENTS":195,"LAT":32.8019,"LONG":58.24,"DISOBEDIENCE_INDEX":0.0078,"peaceful":98.25,"intervention":0.0,"force":0.0,"violent":1.75},{"ADMIN1":"Tehran","TOTAL_SCORE":1.9399,"TOTAL_EVENTS":6187,"LAT":35.5022,"LONG":51.3269,"DISOBEDIENCE_INDEX":0.5112,"peaceful":68.77,"intervention":21.74,"force":1.84,"violent":7.64},{"ADMIN1":"West Azerbaijan","TOTAL_SCORE":0.4572,"TOTAL_EVENTS":839,"LAT":37.8742,"LONG":44.7003,"DISOBEDIENCE_INDEX":0.1785,"peaceful":86.57,"intervention":4.57,"force":2.0,"violent":6.86},{"ADMIN1":"Yazd","TOTAL_SCORE":0.3966,"TOTAL_EVENTS":594,"LAT":31.4825,"LONG":54.4162,"DISOBEDIENCE_INDEX":0.1583,"peaceful":95.75,"intervention":1.96,"force":0.0,"violent":2.29},{"ADMIN1":"Zanjan","TOTAL_SCORE":0.1593,"TOTAL_EVENTS":441,"LAT":36.4014,"LONG":48.422,"DISOBEDIENCE_INDEX":0.0701,"peaceful":94.62,"intervention":1.54,"force":0.77,"violent":3.08}];
+        
+        // Sort data descending by TOTAL_EVENTS so large bubbles are rendered first (in the background)
+        mapData.sort(function(a, b) {
+            return b.TOTAL_EVENTS - a.TOTAL_EVENTS;
+        });
+        
+        // Find MAX values for dynamic assignment
+        var maxEvents = Math.max(...mapData.map(d => d.TOTAL_EVENTS));
+
+        function getRadius(val, max) { return 5 + Math.sqrt(val / max) * 30; }
+
+        // Compile Color mapping based entirely on Normalized Disobedience Index (0.0 to 1.0)
+        function getRedColor(ratio) {
+            var pal = ['#fff5f0', '#fee0d2', '#fcbba1', '#fc9272', '#fb6a4a', '#ef3b2c', '#cb181d', '#99000d'];
+            var idx = Math.floor(ratio * (pal.length - 1));
+            if(idx < 0) idx = 0; if(idx >= pal.length) idx = pal.length - 1;
+            return pal[idx];
+        }
+        
+        mapData.forEach(function(region) {
+            var size = getRadius(region.TOTAL_EVENTS, maxEvents);
+            var color = getRedColor(region.DISOBEDIENCE_INDEX);
+            
+            var circle = L.circleMarker([region.LAT, region.LONG], {
+                radius: size, fillColor: color, color: "#cb181d",   
+                weight: 1.5, opacity: 0.8, fillOpacity: 0.75
+            }).addTo(map);
+
+            circle.on('mouseover', function() {
+                this.setStyle({ fillOpacity: 1, weight: 2.5, color: "#333" });
+                this.bringToFront();
+            });
+            circle.on('mouseout', function() {
+                this.setStyle({ fillOpacity: 0.75, weight: 1.5, color: "#cb181d" });
+                // Restore sorting order specifically so large bubbles don't get stuck on top after hovering
+                mapData.forEach(function(r) { /* Can be handled passively, or simple z-index layering if needed*/ });
+            });
+
+            var p = region.peaceful || 0, i = region.intervention || 0, f = region.force || 0, v = region.violent || 0;
+            var c_p = '#3498db', c_i = '#f39c12', c_f = '#8e44ad', c_v = '#e74c3c';
+
+            var bg = 'conic-gradient(' + 
+                c_p + ' 0% ' + p + '%, ' +                             
+                c_i + ' ' + p + '% ' + (p+i) + '%, ' +                 
+                c_f + ' ' + (p+i) + '% ' + (p+i+f) + '%, ' +           
+                c_v + ' ' + (p+i+f) + '% 100%)';                       
+
+            var tooltipHtml = `<div class="tooltip-content">
+                <p class="region-label">Region / Province</p>
+                <h4>${region.ADMIN1}</h4>
+                <p class="score-label">Events: ${region.TOTAL_EVENTS}<br>Index: ${region.DISOBEDIENCE_INDEX.toFixed(2)}</p>
+                <div class="pie-chart" style="background: ${bg};"></div>
+                <div class="legend">
+                    <div class="legend-item"><div class="color-box" style="background:${c_p};"></div>Peaceful</div>
+                    <div class="legend-item"><div class="color-box" style="background:${c_i};"></div>Intervention</div>
+                    <div class="legend-item"><div class="color-box" style="background:${c_f};"></div>Force</div>
+                    <div class="legend-item"><div class="color-box" style="background:${c_v};"></div>Violent</div>
+                </div>
+            </div>`;
+
+            circle.bindTooltip(tooltipHtml, { direction: 'top', className: 'custom-tooltip', offset: [0, -size] });
+        });
+    </script>
+</body>
+</html>
