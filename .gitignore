@@ -24,3 +24,4 @@ npm-debug.log*
 # Large data, opt-in
 data/raw/
 *.csv.gz
+POLI3148_Assignment1_Instruction.pdf 
