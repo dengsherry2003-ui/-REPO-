@@ -101,5 +101,27 @@ To replicate the data processing and regenerate the dashboard:
 
 You can install all the required dependencies quickly via your terminal or command prompt:
 
-```bash
+```python
 pip install pandas numpy plotly
+```
+
+## Limitations
+
+While the data provides a compelling look at Iranian civil unrest, the following limitations should be considered when interpreting the results:
+
+* **Reporting Bias & Censorship:** The data relies heavily on ACLED’s collection methods, which aggregate media reports and NGO statements. In highly restrictive environments like Iran, state-led internet shutdowns and the suppression of journalists can lead to an undercounting of events, particularly in remote rural provinces.
+* **Lag in Fatality Verification:** Fatality figures in conflict zones are often subject to revision. While ACLED is rigorous in its verification, the figures for very recent events (Q1 2026) should be viewed as conservative estimates that may rise as more information becomes available.
+* **Population Exposure Proxy:** The *Disobedience Severity Index* uses population exposure as a denominator. While this helps normalize the data, it does not account for the varying demographic density or the specific "tactical value" of certain locations (e.g., a small protest at a major oil refinery may be more significant than a larger one in a residential square).
+
+---
+
+## Author Information
+
+**[Your Name]** *Undergraduate Student, University of Hong Kong (HKU)* **Academic Background:** Statistics & Political Science  
+**Research Interests:** Data Science in Public Policy, Middle Eastern Geopolitics, and Quantitative Conflict Analysis.
+
+This project was developed as part of **POLI3148: Data Science in Politics and Public Administration**.
+
+* **GitHub:** [Your GitHub Profile Link]
+* **Contact:** [Your Email Address]
+* **Date:** April 2026
