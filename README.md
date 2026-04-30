@@ -117,11 +117,11 @@ While the data provides a compelling look at Iranian civil unrest, the following
 
 ## Author Information
 
-**[Your Name]** *Undergraduate Student, University of Hong Kong (HKU)* **Academic Background:** Statistics & Political Science  
+**Sherry Deng** *Undergraduate Student, University of Hong Kong (HKU)* **Academic Background:** Bachelor of Social Sciences (Government and Laws) and Bachelor of Laws
 **Research Interests:** Data Science in Public Policy, Middle Eastern Geopolitics, and Quantitative Conflict Analysis.
 
 This project was developed as part of **POLI3148: Data Science in Politics and Public Administration**.
 
-* **GitHub:** [Your GitHub Profile Link]
-* **Contact:** [Your Email Address]
+* **GitHub:** https://github.com/dengsherry2003-ui
+* **Contact:** u3584280@connect.hku.hk
 * **Date:** April 2026
